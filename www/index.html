@@ -115,7 +115,6 @@
       }
       .radio-control:hover {cursor: pointer;}
       #play, #pause { width: 18px; }
-      #debug { margin: 0; }
 
       #loading {
         margin: 25px 0 0;
@@ -240,25 +239,24 @@
             <span class='t15'>M</span>
         </div>
         <p id='subtitle'>
-          Internet silent disco.
-          <a href='https://github.com/rubyonrials/backtogetherfm' target='_blank'>&#9432;</a>
+          Our silent disco.
+<!--          <a href='https://github.com/rubyonrials/backtogetherfm' target='_blank'>&#9432;</a>-->
         </p>
-
-        <div id='now-playing'></div>
 
         <div id='radio-controls' style='display: none;'>
           <div id='play' class='radio-control' style='display:none;'>&#x23F5</div>
           <div id='pause' class='radio-control' style='display:none;'>&#x23F8</div>
         </div>
+        
+        <div id='reconnect' class='radio-control'>Reconnect</div>
 
         <p id='loading' class='blinking'>Connecting...</p>
       </div>
     </div>
 
-    <p id="debug"></p>
     <audio id="hls-audio" title='BackTogether.FM'></audio>
     <script src="hls.js"></script>
-    <script type="module">
+    <script>
         const SERVER_URI = 'http://backtogetherfm-server-7ff91a13ede0.herokuapp.com';
         // const SERVER_URI = 'http://localhost:9876';
         const RED = 'red';
@@ -509,23 +507,24 @@
 
           document.getElementById("radio-controls").style.display = 'flex';
         }
-
-        const initialize = async () => {
-          document.getElementById("play").addEventListener("click", () => playChannel(currentChannel));
-          document.getElementById("pause").addEventListener("click", pause);
-          getAudioPlayer().addEventListener('ended', () => unsubscribe(currentChannel));
-
+        
+        const restartConnection = async () => {
           const streamableChannels = await getStreamableChannels();
           currentChannel = streamableChannels[Math.floor(Math.random() * streamableChannels.length)];
           subscribe(currentChannel);
           updateRadioControls('INITIALIZE');
         }
+        
+        const initialize = async () => {
+          document.getElementById("play").addEventListener("click", () => playChannel(currentChannel));
+          document.getElementById("pause").addEventListener("click", pause);
+          document.getElementById("reconnect").addEventListener("click", restartConnection);
 
-        document.addEventListener('deviceready', function() {
-            setTimeout(initialize, 10000);  // 10 seconds delay
-        }, false);
-        //initialize();
+          getAudioPlayer().addEventListener('ended', () => unsubscribe(currentChannel));
+          restartConnection();
+        }
 
+        initialize();
     </script>
   </body>
 </html>
