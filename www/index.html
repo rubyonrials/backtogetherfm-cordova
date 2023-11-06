@@ -1,7 +1,7 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta http-equiv="Content-Security-Policy" content="default-src *; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval';">
+    <meta http-equiv="Content-Security-Policy" content="default-src * blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; media-src * blob:;">
 
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
     <!-- For modern browsers - multi-size PNG -->
@@ -16,6 +16,10 @@
       @font-face {
         font-family: 'Runescape';
         src: url('runescape.ttf');
+      }
+
+      html, body {
+        height: 100vh;
       }
 
       body {
@@ -239,16 +243,15 @@
             <span class='t15'>M</span>
         </div>
         <p id='subtitle'>
-          Our silent disco.
-<!--          <a href='https://github.com/rubyonrials/backtogetherfm' target='_blank'>&#9432;</a>-->
+          Spatial silent disco.
         </p>
 
-        <div id='radio-controls' style='display: none;'>
-          <div id='play' class='radio-control' style='display:none;'>&#x23F5</div>
-          <div id='pause' class='radio-control' style='display:none;'>&#x23F8</div>
+        <div id='radio-controls'>
+          <div id='reconnect' class='radio-control'>&#x21BB;&#xFE0E;</div>
+          <div id='play' class='radio-control' style='display:none;'>&#x23F5;&#xFE0E;</div>
+          <div id='pause' class='radio-control' style='display:none;'>&#x23F8;&#xFE0E;</div>
         </div>
-        
-        <div id='reconnect' class='radio-control'>Reconnect</div>
+
 
         <p id='loading' class='blinking'>Connecting...</p>
       </div>
@@ -257,8 +260,7 @@
     <audio id="hls-audio" title='BackTogether.FM'></audio>
     <script src="hls.js"></script>
     <script>
-        const SERVER_URI = 'http://backtogetherfm-server-7ff91a13ede0.herokuapp.com';
-        // const SERVER_URI = 'http://localhost:9876';
+        const SERVER_URI = 'http://btos.fm';
         const RED = 'red';
         const BLUE = 'blue';
         const GREEN = 'green';
@@ -283,7 +285,7 @@
           }
         }
 
-        var currentChannel, channelBackward, channelForward;
+        var currentChannel;
         var initializedRadioControls, userInitiatedPlayback = false;
 
         const getAudioPlayer = () => {
@@ -298,7 +300,7 @@
             }
           )
             .then(response => response.json())
-            .catch(error => throwError(error, 'Connection failed (code 1).'));
+            .catch(error => throwError(error, 'Connection failed. Are you connected to BackTogether.FM WiFi?'));
           return Object.keys(streamableChannels);
         }
 
@@ -325,24 +327,14 @@
             }
           )
             .then(response => response.text())
-            .catch(error => throwError(error, 'Connection failed (code 1).'));
+            .catch(error => throwError(error, 'Connection failed. Are you connected to BackTogether.FM WiFi?'));
           const streamPath = `${SERVER_URI}/${streamFilename}`;
+          console.log('streamFilename:');
+          console.log(streamFilename);
+          console.log('streamPath:');
+          console.log(streamPath);
 
-          if (Hls.isSupported()) {
-            const initializeHlsJs = () => {
-              return new Promise((resolve, reject) => {
-                const hls = new Hls();
-                hls.loadSource(streamPath);
-                hls.attachMedia(audioPlayer);
-                hls.on(Hls.Events.MANIFEST_PARSED, async () => {
-                  await audioPlayer.play();
-                  resolve();
-                });
-              });
-            }
-
-            await initializeHlsJs();
-          } else if (audioPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+          if (audioPlayer.canPlayType('application/vnd.apple.mpegurl')) {
             const initializeNativeHls = () => {
               return new Promise((resolve, reject) => {
                 audioPlayer.addEventListener('loadedmetadata', async () => {
@@ -401,11 +393,6 @@
 
         // channel: RED | BLUE | GREEN
         const playChannel = async (channel) => {
-          if (currentChannel !== channel) {
-            stopAudioPlayback();
-            currentChannel = channel;
-          }
-
           await startAudioPlayback();
           updateRadioControls();
         }
@@ -438,7 +425,7 @@
         // customMessage: String
         const throwError = (error, customMessage) => {
           const fullErrorMessage = `${customMessage}\n\n ${error}`;
-          displayLoading('ERROR', fullErrorMessage);
+          displayLoading('ERROR', customMessage);
           throw new Error(fullErrorMessage);
         }
 
@@ -460,33 +447,13 @@
 
           displayLoading('NONE');
 
-          const otherStreamableChannels = streamableChannels.filter(channel => channel !== currentChannel);
-          if (!otherStreamableChannels?.length) {
-            channelBackward = null;
-            channelForward = null;
-          } else if (otherStreamableChannels.length === 1) {
-            channelBackward = null;
-            channelForward = otherStreamableChannels[0];
-          } else {
-            if (currentChannel === RED) {
-              channelBackward = BLUE;
-              channelForward = GREEN;
-            } else if (currentChannel === GREEN) {
-              channelBackward = RED;
-              channelForward = BLUE;
-            } else {
-              channelBackward = GREEN;
-              channelForward = RED;
-            }
-          }
-
           var currentColorOpaque = CHANNEL_DIRECTORY[currentChannel].colorOpaque;
           var currentColorTransparent = CHANNEL_DIRECTORY[currentChannel].colorTransparent;
 
-          if (!channelBackward && !channelForward) {
+          /* if (!channelBackward && !channelForward) {
             currentColorOpaque = LIVE_COLOR_OPAQUE;
             currentColorTransparent = LIVE_COLOR_TRANSPARENT;
-          }
+          } */
 
           if(currentChannelIsPlaying()) {
             document.getElementById("play").style.display = 'none';
@@ -497,8 +464,10 @@
           } else {
             if (streamableChannels.includes(currentChannel)) {
               document.getElementById("play").style.display = 'block';
+              document.getElementById("reconnect").style.display = 'none';
             } else {
               document.getElementById("play").style.display = 'none';
+              document.getElementById("reconnect").style.display = 'block';
             }
             document.getElementById("pause").style.display = 'none';
             document.getElementById("sunburst").style.background = 'none';
@@ -507,14 +476,14 @@
 
           document.getElementById("radio-controls").style.display = 'flex';
         }
-        
+
         const restartConnection = async () => {
           const streamableChannels = await getStreamableChannels();
           currentChannel = streamableChannels[Math.floor(Math.random() * streamableChannels.length)];
           subscribe(currentChannel);
           updateRadioControls('INITIALIZE');
         }
-        
+
         const initialize = async () => {
           document.getElementById("play").addEventListener("click", () => playChannel(currentChannel));
           document.getElementById("pause").addEventListener("click", pause);

@@ -35,8 +35,10 @@
         <icon src="www/icons/appstore.png" width="1024" height="1024" />
     </platform>
 
-    <access origin="http://backtogetherfm-server-7ff91a13ede0.herokuapp.com" />
+    # Cordova setting
+    <access origin="*" />
 
+    # iOS ATS setting
     <edit-config target="NSAppTransportSecurity" file="*-Info.plist" mode="merge">
          <dict>
              <key>NSAllowsArbitraryLoads</key>
