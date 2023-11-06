@@ -258,7 +258,6 @@
     </div>
 
     <audio id="hls-audio" title='BackTogether.FM'></audio>
-    <script src="hls.js"></script>
     <script>
         const SERVER_URI = 'http://btos.fm';
         const RED = 'red';
@@ -329,10 +328,6 @@
             .then(response => response.text())
             .catch(error => throwError(error, 'Connection failed. Are you connected to BackTogether.FM WiFi?'));
           const streamPath = `${SERVER_URI}/${streamFilename}`;
-          console.log('streamFilename:');
-          console.log(streamFilename);
-          console.log('streamPath:');
-          console.log(streamPath);
 
           if (audioPlayer.canPlayType('application/vnd.apple.mpegurl')) {
             const initializeNativeHls = () => {
