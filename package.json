@@ -15,9 +15,14 @@
   "cordova": {
     "platforms": [
       "ios"
-    ]
+    ],
+    "plugins": {
+      "com.unarin.cordova.beacon": {}
+    }
   },
   "devDependencies": {
-    "cordova-ios": "^7.0.1"
+    "cordova-ios": "^7.0.1",
+    "cordova-plugin-device": "^2.1.0",
+    "cordova-plugin-ibeacon": "^3.8.1"
   }
 }

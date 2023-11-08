@@ -258,6 +258,7 @@
     </div>
 
     <audio id="hls-audio" title='BackTogether.FM'></audio>
+    <script type="text/javascript" src="cordova.js"></script>
     <script>
         const SERVER_URI = 'http://btos.fm';
         const RED = 'red';
@@ -488,7 +489,111 @@
           restartConnection();
         }
 
-        initialize();
+        document.addEventListener('deviceready', onDeviceReady, false);
+        function onDeviceReady() {
+          var seenRSSIMap = {
+            [ RED ]: [],
+            [ GREEN ]: [],
+            [ BLUE ]: []
+          };
+          var averageRSSIMap = {
+            [ RED ]: null,
+            [ GREEN ]: null,
+            [ BLUE ]: null
+          };
+
+          function updateRange(beacon, color, major, minor) {
+              if (beacon.major == major && beacon.minor == minor && beacon.rssi != 0) {
+                  // Update seenRSSIMap
+                  seenRSSIMap[color].push(beacon.rssi);
+                  if (seenRSSIMap[color].length > 5) {
+                      seenRSSIMap[color].shift();
+                  }
+
+                  // Update averageRSSIMap if 5 values
+
+                  if (seenRSSIMap[color].length === 5) {
+                    const sum = seenRSSIMap[color].reduce((acc, rssi) => acc + rssi, 0);
+                    const average = sum / seenRSSIMap[color].length;
+                    averageRSSIMap[color] = average;
+                  }
+
+                  // Update current channel if needed
+                  let highestAverage = -Infinity; // Start with the lowest possible number
+                  let closestChannel = null;
+                  for (const color in averageRSSIMap) {
+                      if (averageRSSIMap[color] !== null && averageRSSIMap[color] > highestAverage) {
+                          highestAverage = averageRSSIMap[color];
+                          closestChannel = color;
+                      }
+                  }
+
+                  console.log("###");
+                  console.log("###");
+                  console.log("###");
+                  console.log("NEW CHANNEL WOULD BE:", closestChannel);
+                  console.log("###");
+                  console.log("###");
+                  console.log("###");
+              }
+          }
+
+          var delegate = new cordova.plugins.locationManager.Delegate();
+          <!-- delegate.didDetermineStateForRegion = function(pluginResult) { -->
+          <!--     console.log('didDetermineStateForRegion:', pluginResult); -->
+          <!-- }; -->
+          <!-- delegate.didStartMonitoringForRegion = function(pluginResult) { -->
+          <!--     console.log('didStartMonitoringForRegion:', pluginResult); -->
+          <!-- }; -->
+          delegate.didRangeBeaconsInRegion = function(pluginResult) {
+              console.log('didRangeBeaconsInRegion:', pluginResult);
+              pluginResult.beacons.forEach(function(beacon) {
+                console.log('Detected iBeacon:' + beacon.uuid + ' RSSI:' + beacon.rssi + ' Major/Minor:' + beacon.major + beacon.minor);
+
+                updateRange(beacon, RED, 0, 0);
+                updateRange(beacon, GREEN, 1, 1);
+                updateRange(beacon, BLUE, 2, 2);
+                console.log(JSON.stringify(seenRSSIMap));
+                console.log(JSON.stringify(averageRSSIMap));
+              });
+          };
+          <!-- delegate.didEnterRegion = function(pluginResult) { -->
+          <!--     console.log('didEnterRegion:', pluginResult); -->
+          <!--     document.getElementById("page").style.background = 'green'; -->
+          <!-- }; -->
+          <!-- delegate.didExitRegion = function(pluginResult) { -->
+          <!--     console.log('didExitRegion:', pluginResult); -->
+          <!--     document.getElementById("page").style.background = 'red'; -->
+          <!-- }; -->
+          cordova.plugins.locationManager.setDelegate(delegate);
+          cordova.plugins.locationManager.requestWhenInUseAuthorization();
+
+          // Create a new region that uses the UUID of your beacon
+          var masterUUID = '5ae549ce-f009-47c3-8727-49a686c72c15';
+          var masterIdentifier = 'master-beacon-region';
+
+          try {
+            var masterRegion = new cordova.plugins.locationManager.BeaconRegion(masterIdentifier, masterUUID);
+
+            cordova.plugins.locationManager.startMonitoringForRegion(masterRegion)
+                .fail(function(e) { console.error(e); })
+                .done();
+
+            // Optionally start ranging for the region to determine proximity, not just entry/exit
+            cordova.plugins.locationManager.startRangingBeaconsInRegion(masterRegion)
+                .fail(function(e) { console.error(e); })
+                .done();
+          } catch (error) {
+            console.error('beacon error', error.message);
+            console.error(error.stack);
+          }
+
+
+          setTimeout(function() {
+            initialize();
+          }, 10000);
+
+        }
     </script>
   </body>
 </html>
